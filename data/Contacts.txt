@@ -1,0 +1,5 @@
+Manoj,Kumar,28,100,12000
+Kishore,Mathew,42,101,13000
+Stella,Thomas,62,102,14000
+Praveen,Nair,32,103,15000
+Annie,Anto,26,104,15000
