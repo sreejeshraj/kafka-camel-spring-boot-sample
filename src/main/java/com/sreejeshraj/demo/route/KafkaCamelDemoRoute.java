@@ -34,9 +34,13 @@ public class KafkaCamelDemoRoute extends RouteBuilder {
 
 		from("file://{{inputFolder}}?delay=10s&noop=true")
 		.routeId("Route1")
-		.split().tokenize("\r\n")
-		.log("***** body:${body} *****")
+		.startupOrder(1)
+		//.split().tokenize("\r\n")
+		.log("*****Route1 body:${body} *****")
+		.log("*****Route1 headers:${headers} *****")
 		.removeHeaders("kafka*")
+		.setHeader("X-camelFileNameConsumed", simple("${file:onlyname.noext}"))
+		.log("*****Route1 camelFileNameConsumed:${header.camelFileNameConsumed} *****")
 		.setHeader("myHeader", constant("myHeaderValue"))
 		.to("kafka:inputTopic?brokers=localhost:9092")
 		.log(LoggingLevel.DEBUG, "**** Input message pushed To Kafka topic ***** :"+injectedName);
@@ -44,10 +48,11 @@ public class KafkaCamelDemoRoute extends RouteBuilder {
 		
 		from("kafka:inputTopic?brokers=localhost:9092&groupId=myGroup&maxPollRecords=1&autoOffsetReset=earliest")
 		.routeId("Route2")
+		.startupOrder(2)
 		.log("*****Received from topic body:${body} *****")
 		.log("*****Received from topic headers:${headers} *****")
 		.unmarshal(csvDataFormat)
-		.setBody(simple("${body[0]}"))
+		//.setBody(simple("${body[0]}"))
 		.marshal().json(JsonLibrary.Jackson)
 		.log("*****After unmarshall body:${body} *****")
 		.removeHeaders("kafka*")
@@ -55,6 +60,11 @@ public class KafkaCamelDemoRoute extends RouteBuilder {
 		.to("kafka:outputTopic?brokers=localhost:9092")
 		.log(LoggingLevel.DEBUG, "**** Output message pushed To Kafka topic *****");
 		
+		from("kafka:outputTopic?brokers=localhost:9092&groupId=myGroup&maxPollRecords=1&autoOffsetReset=latest")
+		.routeId("Route3")
+		.startupOrder(3)
+		.to("file://{{outputFolder}}?fileName=${header.X-camelFileNameConsumed}__${date:now:yyyyMMddHHmmssSSS}.json")
+		.log(LoggingLevel.DEBUG, "**** Output File created!!! *****");
 		
 		// @formatter:on
 
